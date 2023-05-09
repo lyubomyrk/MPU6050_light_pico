@@ -102,7 +102,7 @@ public:
   bool upsideDownMounting = false;
 
 private:
-  i2c_inst_t *i2c;
+  i2c_inst_t *i2c = nullptr;
   uint8_t addr = MPU6050_ADDR; // 0x68 or 0x69
   float gyro_lsb_to_degsec, acc_lsb_to_g;
   float gyroXoffset, gyroYoffset, gyroZoffset;

@@ -22,8 +22,8 @@ float wrap(float angle, float limit) {
 
 /* INIT and BASIC FUNCTIONS */
 
-MPU6050::MPU6050(i2c_inst_t *i2c, uint8_t addr) {
-  i2c = i2c;
+MPU6050::MPU6050(i2c_inst_t *i2c_instance, uint8_t addr) {
+  i2c = i2c_instance;
   addr = addr;
   setFilterGyroCoef(DEFAULT_GYRO_COEFF);
   setGyroOffsets(0, 0, 0);
@@ -53,21 +53,21 @@ uint8_t MPU6050::begin(int gyro_config_num, int acc_config_num) {
 
 int MPU6050::writeData(uint8_t reg, uint8_t data) {
   uint8_t buf[] = {reg, data};
-  int status = i2c_write_blocking(i2c0, addr, buf, 2, false);
+  int status = i2c_write_blocking(i2c, addr, buf, 2, false);
   return status; // 0 if success
 }
 
 // This method is not used internaly, maybe by user...
 uint8_t MPU6050::readData(uint8_t reg) {
   uint8_t data;
-  i2c_write_blocking(i2c0, addr, &reg, 1, true);
-  i2c_read_blocking(i2c0, addr, &data, 1, false);
+  i2c_write_blocking(i2c, addr, &reg, 1, true);
+  i2c_read_blocking(i2c, addr, &data, 1, false);
   return data;
 }
 
 void MPU6050::readBuffer(uint8_t reg, uint8_t *buffer, uint len) {
-  i2c_write_blocking(i2c0, addr, &reg, 1, true);
-  i2c_read_blocking(i2c0, addr, buffer, len, false);
+  i2c_write_blocking(i2c, addr, &reg, 1, true);
+  i2c_read_blocking(i2c, addr, buffer, len, false);
 }
 
 /* SETTER */
