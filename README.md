@@ -18,6 +18,8 @@ The library is made to retrieve accelerometer and gyroscope measurements from th
 
 A documentation PDF is provided within the library folder, otherwise get it online at [https://github.com/rfetick/MPU6050_light](https://github.com/rfetick/MPU6050_light). It includes definitions of the functions and gives a minimal example of usage of the code.
 
+Additionaly, look into the main.cpp file for an example of how to use the library.
+
 ## License
 
 See the LICENSE file

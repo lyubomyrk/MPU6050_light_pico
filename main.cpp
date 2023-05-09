@@ -3,8 +3,8 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 
-const uint I2C_SDA = 16;
-const uint I2C_SCL = 17;
+const uint I2C_SDA = 18;
+const uint I2C_SCL = 19;
 const uint baud = 400'000; // 400kHz
 
 int main() {
@@ -15,8 +15,8 @@ int main() {
   gpio_pull_up(I2C_SDA);
   gpio_pull_up(I2C_SCL);
 
-  i2c_init(i2c0, baud);
-  MPU6050 imu;
+  i2c_init(i2c1, baud);
+  MPU6050 imu(i2c1);
   imu.begin();
   imu.calcOffsets();
 
