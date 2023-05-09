@@ -1,74 +1,79 @@
-/* MPU6050_light library for Arduino
+/* MPU6050_light library for Raspberry Pi Pico
  *
  * Authors: Lyubomyr Kryshtanovskyi (github.com/lyubomyrk) 2023
- *              ported to pico using C/C++ SDK
+ *              ported to pico using C++ SDK
  *          Romain JL. Fétick (github.com/rfetick)
  *              simplifications and corrections
  *          Tockn (github.com/tockn)
  *              initial author (v1.5.2)
  */
 
-#include "MPU6050_light.h"
+#include "MPU6050_light.hpp"
 
 /* Wrap an angle in the range [-limit,+limit] (special thanks to Edgar Bonet!)
  */
-static float wrap(float angle, float limit) {
-  while (angle > limit)
-    angle -= 2 * limit;
-  while (angle < -limit)
+float wrap(float angle, float limit) {
+  angle = fmodf(angle, 2 * limit);
+  if (angle < 0) {
     angle += 2 * limit;
-  return angle;
+  }
+  return angle - limit;
 }
 
 /* INIT and BASIC FUNCTIONS */
 
-MPU6050::MPU6050(TwoWire &w) {
-  wire = &w;
+MPU6050::MPU6050(i2c_inst_t *i2c, uint8_t addr) {
+  i2c = i2c;
+  addr = addr;
   setFilterGyroCoef(DEFAULT_GYRO_COEFF);
   setGyroOffsets(0, 0, 0);
   setAccOffsets(0, 0, 0);
 }
 
-byte MPU6050::begin(int gyro_config_num, int acc_config_num) {
+uint8_t MPU6050::begin(int gyro_config_num, int acc_config_num) {
   // changed calling register sequence
   // [https://github.com/rfetick/MPU6050_light/issues/1] -> thanks to augustosc
-  byte status = writeData(MPU6050_PWR_MGMT_1_REGISTER,
-                          0x01); // check only the first connection with status
+  uint8_t status =
+      writeData(MPU6050_PWR_MGMT_1_REGISTER,
+                0x01); // check only the first connection with status
   writeData(MPU6050_SMPLRT_DIV_REGISTER, 0x00);
   writeData(MPU6050_CONFIG_REGISTER, 0x00);
   setGyroConfig(gyro_config_num);
   setAccConfig(acc_config_num);
 
   this->update();
-  angleX = this->getAccAngleX();
-  angleY = this->getAccAngleY();
-  preInterval = millis(); // may cause lack of angular accuracy if begin() is
-                          // much before the first update()
+  /* angleX = this->getAccAngleX();
+  angleY = this->getAccAngleY(); */
+  angleX = 0;
+  angleY = 0;
+  angleZ = 0;
+  Told = time_us_64();
   return status;
 }
 
-byte MPU6050::writeData(byte reg, byte data) {
-  wire->beginTransmission(address);
-  wire->write(reg);
-  wire->write(data);
-  byte status = wire->endTransmission();
+int MPU6050::writeData(uint8_t reg, uint8_t data) {
+  uint8_t buf[] = {reg, data};
+  int status = i2c_write_blocking(i2c0, addr, buf, 2, false);
   return status; // 0 if success
 }
 
 // This method is not used internaly, maybe by user...
-byte MPU6050::readData(byte reg) {
-  wire->beginTransmission(address);
-  wire->write(reg);
-  wire->endTransmission(true);
-  wire->requestFrom(address, (uint8_t)1);
-  byte data = wire->read();
+uint8_t MPU6050::readData(uint8_t reg) {
+  uint8_t data;
+  i2c_write_blocking(i2c0, addr, &reg, 1, true);
+  i2c_read_blocking(i2c0, addr, &data, 1, false);
   return data;
+}
+
+void MPU6050::readBuffer(uint8_t reg, uint8_t *buffer, uint len) {
+  i2c_write_blocking(i2c0, addr, &reg, 1, true);
+  i2c_read_blocking(i2c0, addr, buffer, len, false);
 }
 
 /* SETTER */
 
-byte MPU6050::setGyroConfig(int config_num) {
-  byte status;
+uint8_t MPU6050::setGyroConfig(int config_num) {
+  uint8_t status;
   switch (config_num) {
   case 0: // range = +- 250 deg/s
     gyro_lsb_to_degsec = 131.0;
@@ -93,8 +98,8 @@ byte MPU6050::setGyroConfig(int config_num) {
   return status;
 }
 
-byte MPU6050::setAccConfig(int config_num) {
-  byte status;
+uint8_t MPU6050::setAccConfig(int config_num) {
+  uint8_t status;
   switch (config_num) {
   case 0: // range = +- 2 g
     acc_lsb_to_g = 16384.0;
@@ -161,7 +166,7 @@ void MPU6050::calcOffsets(bool is_calc_gyro, bool is_calc_acc) {
     ag[3] += gyroX;
     ag[4] += gyroY;
     ag[5] += gyroZ;
-    delay(1); // wait a little bit between 2 measurements
+    sleep_ms(1); // wait a little bit between 2 measurements
   }
 
   if (is_calc_acc) {
@@ -180,16 +185,13 @@ void MPU6050::calcOffsets(bool is_calc_gyro, bool is_calc_acc) {
 /* UPDATE */
 
 void MPU6050::fetchData() {
-  wire->beginTransmission(address);
-  wire->write(MPU6050_ACCEL_OUT_REGISTER);
-  wire->endTransmission(false);
-  wire->requestFrom(address, (uint8_t)14);
+  uint8_t rawData8[14];
+  readBuffer(MPU6050_ACCEL_OUT_REGISTER, rawData8, 14);
 
   int16_t rawData[7]; // [ax,ay,az,temp,gx,gy,gz]
-
   for (int i = 0; i < 7; i++) {
-    rawData[i] = wire->read() << 8;
-    rawData[i] |= wire->read();
+    rawData[i] = rawData8[2 * i] << 8;
+    rawData[i] |= rawData8[2 * i + 1];
   }
 
   accX = ((float)rawData[0]) / acc_lsb_to_g - accXoffset;
@@ -215,12 +217,11 @@ void MPU6050::update() {
   angleAccY = -atan2(accX, sqrt(accZ * accZ + accY * accY)) *
               RAD_2_DEG; // [- 90,+ 90] deg
 
-  unsigned long Tnew = millis();
-  float dt = (Tnew - preInterval) * 1e-3;
-  preInterval = Tnew;
-
   // Correctly wrap X and Y angles (special thanks to Edgar Bonet!)
   // https://github.com/gabriel-milan/TinyMPU6050/issues/6
+  uint64_t Tnew = time_us_64();
+  float dt = (Tnew - Told) / 1'000'000.0;
+  Told = Tnew;
   angleX = wrap(filterGyroCoef * (angleAccX +
                                   wrap(angleX + gyroX * dt - angleAccX, 180)) +
                     (1.0 - filterGyroCoef) * angleAccX,

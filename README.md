@@ -2,7 +2,7 @@
 
 **Lightweight, fast and simple library to communicate with the MPU6050**
 
-:arrow_down: The source code is available at [https://github.com/rfetick/MPU6050_light](https://github.com/rfetick/MPU6050_light)
+:arrow_down: The source code is available at [https://github.com/lyubomyrk/MPU6050_light_pico](https://github.com/lyubomyrk/MPU6050_light_pico)
 
 :arrows_counterclockwise: Your feedback is important. Any issue or suggestion can be reported to the Github `Issues` section
 
@@ -16,13 +16,15 @@ The library is made to retrieve accelerometer and gyroscope measurements from th
 
 ## Documentation
 
-A documentation PDF is provided within the library folder, otherwise get it online at [https://github.com/rfetick/MPU6050_light](https://github.com/rfetick/MPU6050_light). It includes definitions of the functions and gives a minimal example of usage of the code. More examples can be found in the dedicated `examples/` subfolder of the library.
+A documentation PDF is provided within the library folder, otherwise get it online at [https://github.com/rfetick/MPU6050_light](https://github.com/rfetick/MPU6050_light). It includes definitions of the functions and gives a minimal example of usage of the code.
 
 ## License
 
 See the LICENSE file
 
 ## Authors
+
+[lyubomyrk](https://github.com/lyubomyrk) : ported to pico using the SDK.
 
 [rfetick](https://github.com/rfetick) : modifications for better memory management, speed and efficiency.
 
